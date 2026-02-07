@@ -13,9 +13,9 @@ import { clerkMiddleware } from "@clerk/express";
 const app = express();
 
 // connect to database
-await connectDB();
-await connectCloudinary();
-
+connectDB()
+  .then()
+  .catch((err) => console.error("MongoDB Connection Error:", err));
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -36,3 +36,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+export default app;
