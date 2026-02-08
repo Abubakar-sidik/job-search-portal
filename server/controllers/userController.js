@@ -2,111 +2,167 @@ import Job from "../models/Job.js";
 import JobApplication from "../models/JobApplication.js";
 import User from "../models/User.js";
 import { v2 as cloudinary } from "cloudinary";
+import bcrypt from "bcryptjs";
+import generateToken from "../utils/generateToken.js";
 
-// get user data
-export const getUserData = async (req, res) => {
-  const userId = req.auth().userId;
+// @desc    Register new user
+// @route   POST /api/users/register
+export const registerUser = async (req, res) => {
+  const { name, email, password } = req.body;
+  const imageFile = req.file;
 
   try {
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.json({ success: false, message: "user Not Found" });
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
-    res.json({ success: true, user });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    let imageUrl = "";
+    if (imageFile) {
+      const upload = await cloudinary.uploader.upload(imageFile.path);
+      imageUrl = upload.secure_url;
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      image: imageUrl,
+    });
+
+    res.status(201).json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      },
+      token: generateToken(user._id, "user"),
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-//Apply for a job
-export const applyForJob = async (req, res) => {
-  const { jobId } = req.body;
+// @desc    User login
+// @route   POST /api/users/login
+export const loginUser = async (req, res) => {
+  const { email, password } = req.body;
 
   try {
-    const istAlreadyApplied = await JobApplication.find({ jobId, userId });
+    const user = await User.findOne({ email });
 
-    if (istAlreadyApplied.length > 0) {
-      return res.json({ success: false, message: "Already applied" });
+    if (user && (await bcrypt.compare(password, user.password))) {
+      res.json({
+        success: true,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          resume: user.resume,
+        },
+        token: generateToken(user._id, "user"),
+      });
+    } else {
+      res
+        .status(401)
+        .json({ success: false, message: "Invalid email or password" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get user data (Private)
+export const getUserData = async (req, res) => {
+  try {
+    // req.user is populated by protectAccount middleware
+    res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Apply for a job (Private)
+export const applyForJob = async (req, res) => {
+  const { jobId } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const isAlreadyApplied = await JobApplication.findOne({ jobId, userId });
+
+    if (isAlreadyApplied) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Already applied for this job" });
     }
 
     const jobData = await Job.findById(jobId);
-
     if (!jobData) {
-      return res.json({ success: false, message: "Job Not Found" });
+      return res.status(404).json({ success: false, message: "Job Not Found" });
     }
 
     await JobApplication.create({
       companyId: jobData.companyId,
-      userIde,
+      userId,
       jobId,
       date: Date.now(),
     });
 
     res.json({ success: true, message: "Applied Successfully" });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-//Get user applied application
+// @desc    Get user applications (Private)
 export const getUserJobApplication = async (req, res) => {
   try {
-    const userId = req.auth().userId;
-    const applicantions = await JobApplication.find({ userId })
+    const userId = req.user._id;
+    const applications = await JobApplication.find({ userId })
       .populate("companyId", "name email image")
-      .populate("jobId", "title description location category  level salary")
+      .populate("jobId", "title description location category level salary")
       .exec();
 
-    if (!applicantions) {
-      return res.json({ success: false, message: "No job applications found" });
-    }
-
-    return res.json({ success: true, applicantions });
+    res.json({ success: true, applications });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-//update user profile (resume)
+// @desc    Update user profile (resume) (Private)
 export const updateUserResume = async (req, res) => {
   try {
-    const userId = req.auth().userId;
-
+    const userId = req.user._id;
     const resumeFile = req.file;
 
-    const userData = await User.findById(userId);
-
-    if (resumeFile) {
-      const resumeUpload = await cloudinary.uploader.upload(resumeFile.path);
-      userData.resume = resumeUpload.secure_url;
+    if (!resumeFile) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No resume file provided" });
     }
 
-    await userData.save();
+    const resumeUpload = await cloudinary.uploader.upload(resumeFile.path);
 
-    return res.json({ success: true, message: "Resume Updated" });
-  } catch (error) {
-    res.json({ success: false, message: error.message });
-  }
-};
-
-// mange the users with clerk locally
-export const syncUser = async (req, res) => {
-  try {
-    // clerkMiddleware provides req.auth()
-    // req.auth() contains the userId from the Clerk Token
-    const { userId } = req.auth();
-    const { email, name, image } = req.body;
-
-    const user = await User.findOneAndUpdate(
-      { clerkId: userId }, // Find user with this ID
-      { email, name, image }, // Update with this data
-      { upsert: true, new: true }, // IF NOT FOUND: Create it. Return the new doc.
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { resume: resumeUpload.secure_url },
+      { new: true },
     );
 
-    res.status(200).json({ success: true, user });
+    return res.json({
+      success: true,
+      message: "Resume Updated",
+      resume: updatedUser.resume,
+    });
   } catch (error) {
-    console.error("Sync Error:", error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

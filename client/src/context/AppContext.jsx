@@ -1,41 +1,38 @@
-import { createContext, useEffect } from "react";
-import { useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useAuth, useUser } from "@clerk/clerk-react";
 
 export const AppContext = createContext();
 
 export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  const { user } = useUser();
-  const { getToken } = useAuth();
 
-  const [searchFilter, setSearchFilter] = useState({
-    title: "",
-    location: "",
-  });
-
+  // Search State
+  const [searchFilter, setSearchFilter] = useState({ title: "", location: "" });
   const [isSearched, setIsSearched] = useState(false);
+
+  // Data State
   const [jobs, setJobs] = useState([]);
-
   const [showRecruterLogin, setShowRecruterLogin] = useState(false);
+  const [showUserLogin, setShowUserLogin] = useState(false); // Added for custom user login
 
-  const [companyToken, setCompanyToken] = useState(null);
+  // Recruiter Auth State
+  const [companyToken, setCompanyToken] = useState(
+    localStorage.getItem("companyToken"),
+  );
   const [companyData, setCompanyData] = useState(null);
 
+  // User Auth State
+  const [userToken, setUserToken] = useState(localStorage.getItem("userToken"));
   const [userData, setUserData] = useState(null);
   const [userApplications, setUserApplication] = useState([]);
 
-  // function to fetch job data
-
+  // 1. Fetch all jobs (Public)
   const fetchJobs = async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/jobs");
-
+      const { data } = await axios.get(`${backendUrl}/api/jobs`);
       if (data.success) {
         setJobs(data.jobs);
-        console.log(data.jobs);
       } else {
         toast.error(data.message);
       }
@@ -44,16 +41,14 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Function to fectch company data
-  const fetchCompanydata = async () => {
+  // 2. Fetch Company Data (Private - Recruiter)
+  const fetchCompanyData = async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/company/company", {
+      const { data } = await axios.get(`${backendUrl}/api/company/data`, {
         headers: { token: companyToken },
       });
-
       if (data.success) {
         setCompanyData(data.company);
-        console.log(data);
       } else {
         toast.error(data.message);
       }
@@ -62,14 +57,12 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Function to fetch use data
+  // 3. Fetch User Data (Private - User)
   const fetchUserData = async () => {
     try {
-      const token = await getToken();
-      const { data } = await axios.get(backendUrl + "/api/users/user", {
-        headers: { Authorization: `Bearer ${token}` },
+      const { data } = await axios.get(`${backendUrl}/api/users/user`, {
+        headers: { token: userToken }, // Changed from Clerk Authorization header
       });
-
       if (data.success) {
         setUserData(data.user);
       } else {
@@ -80,14 +73,12 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  //function to fetch user applied applications data
+  // 4. Fetch User Applied Jobs
   const fetchUserApplications = async () => {
     try {
-      const token = await getToken();
-      const { data } = await axios.get(backendUrl + "/api/users/applications", {
-        headers: { Authorization: `Bearer ${token}` },
+      const { data } = await axios.get(`${backendUrl}/api/users/applications`, {
+        headers: { token: userToken },
       });
-
       if (data.success) {
         setUserApplication(data.applications);
       } else {
@@ -98,30 +89,25 @@ export const AppContextProvider = (props) => {
     }
   };
 
+  // Initial Load
   useEffect(() => {
     fetchJobs();
-
-    const storedCompanyToken = localStorage.getItem("companytoken");
-
-    if (storedCompanyToken) {
-      setCompanyToken(storedCompanyToken);
-    }
   }, []);
 
-  // call fetchCompanyData when ever the page is reloaded
+  // Sync Recruiter Data
   useEffect(() => {
     if (companyToken) {
-      fetchCompanydata();
+      fetchCompanyData();
     }
   }, [companyToken]);
 
-  // call fetUserData when ever the page is reloaded
+  // Sync User Data
   useEffect(() => {
-    if (user) {
+    if (userToken) {
       fetchUserData();
       fetchUserApplications();
     }
-  }, [user]);
+  }, [userToken]);
 
   const value = {
     searchFilter,
@@ -132,18 +118,24 @@ export const AppContextProvider = (props) => {
     setJobs,
     showRecruterLogin,
     setShowRecruterLogin,
+    showUserLogin,
+    setShowUserLogin,
     companyToken,
     setCompanyToken,
     companyData,
     setCompanyData,
-    backendUrl,
-    userApplications,
-    setUserApplication,
+    userToken,
+    setUserToken,
     userData,
     setUserData,
+    userApplications,
+    setUserApplication,
+    backendUrl,
     fetchUserData,
     fetchUserApplications,
+    fetchJobs,
   };
+
   return (
     <AppContext.Provider value={value}>{props.children}</AppContext.Provider>
   );

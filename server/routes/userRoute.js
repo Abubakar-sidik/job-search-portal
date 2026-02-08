@@ -1,28 +1,42 @@
 import express from "express";
-import multer from "multer";
 import {
+  registerUser,
+  loginUser,
   applyForJob,
   getUserData,
   getUserJobApplication,
   updateUserResume,
-  syncUser,
 } from "../controllers/userController.js";
-import { requireAuth } from "@clerk/express";
+import upload from "../config/multer.js"; // Using your central multer config
+import { protectAccount } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-const upload = multer({ dest: "uploads/" });
+// --- Public Routes ---
 
-//Route to get user data
-router.get("/user", getUserData);
+// Route to register a new user (with profile image)
+router.post("/register", upload.single("image"), registerUser);
+
+// Route for user login
+router.post("/login", loginUser);
+
+// --- Private Routes (Requires JWT) ---
+
+// Route to get logged-in user data
+router.get("/user", protectAccount, getUserData);
 
 // Route to apply for a job
-router.post("/apply", applyForJob);
+router.post("/apply", protectAccount, applyForJob);
 
-// Route to get applied jobs data
-router.get("/applications", getUserJobApplication);
+// Route to get all jobs a user has applied for
+router.get("/applications", protectAccount, getUserJobApplication);
 
-// Route to update user profile (resume)
-router.post("/update-resume", upload.single("resume"), updateUserResume);
-router.post("/sync", requireAuth(), syncUser);
+// Route to update user profile (resume upload)
+router.post(
+  "/update-resume",
+  protectAccount,
+  upload.single("resume"),
+  updateUserResume,
+);
+
 export default router;

@@ -1,10 +1,20 @@
 import React from "react";
 import { assets } from "../assets/assets";
+import { useNavigate } from "react-router-dom";
 
 const Footer = () => {
   return (
     <div className=" container px-4 2xl:px-20 mx-auto flex items-center justify-between gap-4 py-3 mt-20">
-      <img width={160} alt="logo" />
+      <div className=" flex items-center cursor-pointer ">
+        <img
+          src={assets.logo2}
+          className="cursor-pointer w-20 sm:w-20"
+          alt="Logo"
+        />
+        <span className="max-sm:hidden text-gray-800 font-medium -ml-4">
+          Job Portal
+        </span>
+      </div>
       <p className="flex-1 border-l border-gray-400 pl-4 text-sm text-gray-500 max-sm:hidden">
         Copyright @SoftwareDevGroup7.dev | All right reserved.
       </p>

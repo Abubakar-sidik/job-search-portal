@@ -1,20 +1,24 @@
 import Job from "../models/Job.js";
 
-// Get all jobs
+// @desc    Get all visible jobs
+// @route   GET /api/jobs
 export const getJobs = async (req, res) => {
   try {
+    // We only want jobs where visible is true
+    // Populate company details but exclude sensitive data like password
     const jobs = await Job.find({ visible: true }).populate({
       path: "companyId",
       select: "-password",
     });
 
-    res.json({ sucess: true, jobs });
+    res.status(200).json({ success: true, jobs });
   } catch (error) {
-    res.json({ sucess: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Get a single job by ID
+// @desc    Get a single job by ID
+// @route   GET /api/jobs/:id
 export const getJobById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -25,14 +29,18 @@ export const getJobById = async (req, res) => {
     });
 
     if (!job) {
-      return res.json({
-        sucess: false,
-        message: "Job not foud",
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
       });
     }
 
-    res.json({ sucess: true, job });
+    res.status(200).json({ success: true, job });
   } catch (error) {
-    res.json({ sucess: false, message: error.message });
+    // Check if error is due to an invalid MongoDB ObjectID
+    if (error.kind === "ObjectId") {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    res.status(500).json({ success: false, message: error.message });
   }
 };

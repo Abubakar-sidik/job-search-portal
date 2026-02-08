@@ -10,38 +10,36 @@ import {
   changeJobVisibility,
 } from "../controllers/companyController.js";
 import upload from "../config/multer.js";
-import { protectCompany } from "../middlewares/authMiddleware.js";
+import { protectAccount } from "../middlewares/authMiddleware.js"; // Standardized name
 
 const router = express.Router();
 
-// Register company
+// --- Public Routes ---
 
+// Register company (with logo upload)
 router.post("/register", upload.single("image"), registerCompany);
 
 // Company login
 router.post("/login", loginCompany);
 
-// get company data
+// --- Private Routes (Requires JWT) ---
 
-router.get("/company", protectCompany, getCompanyData);
+// Get logged-in company profile data
+router.get("/data", protectAccount, getCompanyData);
 
-// post new job
+// Post a new job opening
+router.post("/post-jobs", protectAccount, postJob);
 
-router.post("/post-job", protectCompany, postJob);
+// Get all applicants for the company's jobs
+router.get("/applicants", protectAccount, getCompanyJobApplicants);
 
-// Get Company Job applicants
+// Get a list of all jobs posted by this company
+router.get("/list-jobs", protectAccount, getCompanyPostedJobs);
 
-router.get("/applicants", protectCompany, getCompanyJobApplicants);
+// Change the status of a specific job application (Accepted/Rejected)
+router.post("/change-status", protectAccount, changeJobApplicationStatus);
 
-// Get Company posted jobs
-
-router.get("/list-jobs", protectCompany, getCompanyPostedJobs);
-
-// Change job application status
-router.post("/change-status", protectCompany, changeJobApplicationStatus);
-
-// Change application visibility
-
-router.post("/change-job-visibility", protectCompany, changeJobVisibility);
+// Toggle job visibility (On/Off)
+router.post("/change-job-visibility", protectAccount, changeJobVisibility);
 
 export default router;

@@ -1,56 +1,65 @@
 import React, { useContext, useEffect } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { assets } from "../assets/assets";
 import { AppContext } from "../context/AppContext";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // get company data from the contex
   const { companyData, setCompanyData, setCompanyToken } =
     useContext(AppContext);
 
   // Function to logout for company
   const logout = () => {
     setCompanyToken(null);
-    localStorage.removeItem("CompanyToken");
+    localStorage.removeItem("companyToken"); // Standardized key name
     setCompanyData(null);
     navigate("/");
   };
 
+  // Only redirect to manage-jobs if we are at the base /dashboard path
   useEffect(() => {
-    if (companyData) {
+    if (companyData && location.pathname === "/dashboard") {
       navigate("/dashboard/manage-jobs");
     }
-  }, [companyData]);
+  }, [companyData, location.pathname, navigate]);
 
   return (
-    <div className=" min-h-screen">
-      {/* navbar for recruter panel */}
-      <div className="shadow py-4">
-        <div className=" px-5 flex justify-between items-center">
-          <img
-            onClick={(e) => navigate("/")}
-            className=" max-sm:w-32 items-center gap-3"
-            alt="logo"
-          />
+    <div className="min-h-screen bg-white">
+      {/* Navbar for recruiter panel */}
+      <nav className="shadow py-4 bg-white sticky top-0 z-20">
+        <div className="px-5 flex justify-between items-center">
+          <div
+            onClick={() => navigate("/")}
+            className=" flex items-center cursor-pointer "
+          >
+            <img
+              src={assets.logo2}
+              className="cursor-pointer w-20 sm:w-20"
+              alt="Logo"
+            />
+            <span className="max-sm:hidden text-gray-800 font-medium -ml-4">
+              Job Portal
+            </span>
+          </div>
 
           {companyData && (
-            <div className=" flex justify-between items-center">
-              <p className=" px-2 max-sm:hidden">
-                Welcome , {companyData.name}
+            <div className="flex items-center gap-3">
+              <p className="max-sm:hidden font-medium text-gray-700">
+                Welcome, {companyData.name}
               </p>
               <div className="relative group">
                 <img
-                  className=" w-8 border rounded-full"
+                  className="w-10 h-10 border rounded-full object-cover cursor-pointer"
                   src={companyData.image}
-                  alt=""
+                  alt="company logo"
                 />
-                <div className=" absolute hidden group-hover:block top-0 ring-0 z-10 text-black rounded pt-12">
-                  <ul className=" list-none m-0 p-2 bg-white border text-sm">
+                <div className="absolute hidden group-hover:block right-0 top-full pt-2 z-30">
+                  <ul className="list-none m-0 p-2 bg-white border shadow-lg rounded text-sm min-w-[120px]">
                     <li
                       onClick={logout}
-                      className="py-1 px-2 cursor-pointer pr-10"
+                      className="py-2 px-4 cursor-pointer hover:bg-red-50 text-red-600 font-medium transition-colors"
                     >
                       Logout
                     </li>
@@ -60,45 +69,60 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-      </div>
-      <div className=" flex items-start">
-        {/* left sidebar with options to manage jobs and view applications */}
-        <div className=" inline-block min-h-screen border-r-2">
-          <ul className=" flex flex-col items-start pt-5 to-gray-800">
+      </nav>
+
+      <div className="flex items-start">
+        {/* Left Sidebar */}
+        <aside className="inline-block min-h-screen border-r-2 bg-gray-50/50">
+          <ul className="flex flex-col items-start pt-5 text-gray-800">
             <NavLink
               className={({ isActive }) =>
-                ` flex items-center p-3 sm:px6 gap-2 w-full hover:bg-gray-100 ${isActive && "bg-blue-100 border-r-4 border-blue-500"} `
+                `flex items-center p-3 sm:px-6 gap-3 w-full transition-all ${
+                  isActive
+                    ? "bg-blue-50 border-r-4 border-blue-500 text-blue-600"
+                    : "hover:bg-gray-100"
+                }`
               }
-              to={"/dashboard/add-jobs"}
+              to="/dashboard/add-jobs"
             >
-              <img className=" min-w-4" src={assets.add_icon} alt="" />
-              <p className=" max-sm:hidden ">Add jobs</p>
+              <img className="w-5" src={assets.add_icon} alt="" />
+              <p className="max-sm:hidden font-medium">Add Job</p>
             </NavLink>
 
             <NavLink
               className={({ isActive }) =>
-                ` flex items-center p-3 sm:px6 gap-2 w-full hover:bg-gray-100 ${isActive && "bg-blue-100 border-r-4 border-blue-500"} `
+                `flex items-center p-3 sm:px-6 gap-3 w-full transition-all ${
+                  isActive
+                    ? "bg-blue-50 border-r-4 border-blue-500 text-blue-600"
+                    : "hover:bg-gray-100"
+                }`
               }
-              to={"/dashboard/manage-jobs"}
+              to="/dashboard/manage-jobs"
             >
-              <img className=" min-w-4" src={assets.home_icon} alt="" />
-              <p className=" max-sm:hidden ">Manage jobs</p>
+              <img className="w-5" src={assets.home_icon} alt="" />
+              <p className="max-sm:hidden font-medium">Manage Jobs</p>
             </NavLink>
 
             <NavLink
               className={({ isActive }) =>
-                ` flex items-center p-3 sm:px6 gap-2 w-full hover:bg-gray-100 ${isActive && "bg-blue-100 border-r-4 border-blue-500"} `
+                `flex items-center p-3 sm:px-6 gap-3 w-full transition-all ${
+                  isActive
+                    ? "bg-blue-50 border-r-4 border-blue-500 text-blue-600"
+                    : "hover:bg-gray-100"
+                }`
               }
-              to={"/dashboard/view-job-applications"}
+              to="/dashboard/view-job-applications"
             >
-              <img className=" min-w-4" src={assets.person_tick_icon} alt="" />
-              <p className=" max-sm:hidden ">View job applications</p>
+              <img className="w-5" src={assets.person_tick_icon} alt="" />
+              <p className="max-sm:hidden font-medium">Applications</p>
             </NavLink>
           </ul>
-        </div>
-        <div className="flex-1 h-full p-2 sm:p-5">
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 h-full p-4 sm:p-8 bg-white">
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
