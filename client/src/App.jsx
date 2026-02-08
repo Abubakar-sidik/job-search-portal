@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
-import Home from "./pages/home.jsx";
+import Home from "./pages/Home.jsx";
 import Applications from "./pages/Applications.jsx";
 import RecruterLogin from "./components/RecruterLogin.jsx";
 import UserLogin from "./components/UserLogin.jsx"; // Added User Login Modal
